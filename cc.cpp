@@ -1,78 +1,74 @@
 #include<bits/stdc++.h>
 using namespace std;
 
-int n, H[1000], O[1001], G[10001], F[10001];
-bool vis[10001];
+int n, H[1000], G[10001], F[10001], pre[10001], vis[10001], s, e;
 vector<vector<pair<int,int>>> edge; 
 
 signed main()
 {
     freopen("input.txt", "r", stdin);
     cin >> n;
-    vector<vector<int>> a(n, vector<int>(n)); // khởi tạo ma trận n×n toàn 0
 
-    for (int i=0;i<n;i++) {
-        vis[i] = false;
-        for (int j=0;j<n;j++) {
-            int w;
-            cin >> w;
-            //edge[i].push_back({j, w});
-            //edge[j].push_back({i, w});
-            a[i][j] = w;
-        }
-    }
-    for (int i=0;i<n;i++) cin >> H[i];
+    s = 0; e = 7;
 
+    edge.resize(n);
     for (int i=0;i<n;i++) {
         for (int j=0;j<n;j++) {
-            cout << a[i][j] << " ";
+            int w; cin >> w; 
+            if (w>0) edge[i].push_back({j, w});
         }
-        cout << "\n";
     }
-    int start = 0, end = n-1, cnt = 1;
-    G[start] = 0;
-    F[start] = H[start];
-    vis[start] = true;
-    while(cnt < n) {
-        int N = INT_MAX;
-        for (int i=0;i<n;i++) {
-            if (!vis[i]) {
-                
+    for (int i=0;i<n;i++) {
+        vis[i] = -1;
+        G[i] = F[i] = INT_MAX;
+        pre[i] = -1;
+        cin >> H[i];
+    }
+
+    G[s] = 0;
+    F[s] = H[s];
+    vis[s] = 1; // O = 1, C = 0
+
+    while(true) {
+        int N = -1, res = INT_MAX;
+        for (int i=0;i<n;i++) { // Chon N thuoc O co F[N] min
+            if (vis[i] == 1 && res > F[i]) {
+                res = F[i];
+                N = i;
+            }
+        }
+
+        if (N == -1 || N == e) break;
+
+        vis[N] = 0;
+        for (pair<int, int> i : edge[N]) {
+            int Q = i.first;
+            int W = i.second;
+
+            if (vis[Q]==1) {
+                if (G[Q] > G[N] + W) {
+                    G[Q] = G[N] + W;
+                    F[Q] = G[Q] + H[Q];
+                    pre[Q] = N;
+                }
+            }
+            else if (vis[Q]==-1) {
+                G[Q] = G[N] + W;
+                F[Q] = G[Q] + H[Q];
+                pre[Q] = N;
+                vis[Q] = 1;
             }
         }
     }
+    cout << G[e] << "\n";
+
+    int tmp = e;
+    do {
+        cout << tmp << " ";
+        tmp = pre[tmp];
+    } while(pre[tmp]!=-1);
+    cout << s;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
