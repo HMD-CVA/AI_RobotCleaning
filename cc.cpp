@@ -141,6 +141,7 @@ class RobotCleaning{
                 );
                 cout << "Cleaned node " << minNode << ". Remaining: " << remainingDirt.size() << " nodes" << endl;
             }
+            cout << "Total: " << totalCost ;
         }
 };
 
