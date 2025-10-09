@@ -2,92 +2,163 @@
 using namespace std;
 class RobotCleaning{
     private:
-        int n;
+        int n, m;
+        vector<vector<int>> grid;
         vector<vector<pair<int, int>>> edge;
-        vector<int> H;
+        vector<int> heuristic;
     public:
+        void initData() {
+            ifstream file("input.txt");
+            if (!file.is_open()) {
+                cout << "Cannot open input.txt" << endl;
+                return;
+            }
+        
+            file >> n >> m;
+            grid.resize(n, vector<int> (m));
+            for (int i=0;i<n;i++) 
+                for (int j=0;j<m;j++) 
+                    file >> grid[i][j];
+
+            updateEdge();
+            file.close();
+            cout << "Robot initialized with " << n << " nodes" << endl;     
+        }   
+        RobotCleaning() {
+            n = 0;
+            m = 0;
+        }
         RobotCleaning(int _n, vector<vector<pair<int, int>>> _edge, vector<int> _H){
             n = _n;
             edge = _edge;
-            H = _H;
+            heuristic = _H;
             cout << "Robot initialized with " << n << " nodes" << endl;
+        }
+        void updateEdge() {
+            edge.resize(n);
+            heuristic.resize(n * m);
+            for (int i=0;i<n;i++) {
+                for (int j=0;j<m;j++) {
+                    if (grid[i][j] > 0 && grid[i][j]!=INT_MAX) edge[i].push_back({j, grid[i][j]});
+                }
+            }
+        }
+        void setObstactle(int x, int y) {
+            grid[x][y] = INT_MAX;
+            updateEdge();
+        }
+        void setDirty(int x, int y) {
+            grid[x][y] = -1;
+            return;
+        }
+        int coordToID(int x, int y, int cols) {
+            return y*cols + x;
+        }
+        pair<int,int> idToCoord(int id, int cols) {
+            int y = id / cols;
+            int x = id % cols;
+            return {x, y};
         }
         void displayEdgeInfo() {
             cout << "\nEdge Information:" << endl;
             for (int i = 0; i < n; i++) {
                 if (!edge[i].empty()) {
                     cout << "Node " << i << " -> ";
-                    for (const auto& neighbor : edge[i]) {
+                    for (pair<int, int> neighbor : edge[i]) {
                         cout << neighbor.first << "(cost:" << neighbor.second << ") ";
                     }
                     cout << endl;
                 }
             }
         }
+        void displayGrid() {
+            for (int i=0;i<n;i++) {
+                for (int j=0;j<m;j++) {
+                    if (grid[i][j] == INT_MAX) cout << "C"; 
+                    else if (grid[i][j] == -1) cout << "D";
+                    else cout << grid[i][j];
+                    cout << " ";
+                }
+                cout << "\n";
+            }
+        }
         pair<int , vector<int>> findPath(int startId, int goalId) {
             // cout << "Finding path: " << startId << " -> " << goalId << endl;
-            if (startId < 0 || startId >= n || goalId < 0 || goalId >= n) {
+            if (startId < 0 || startId >= n*m || goalId < 0 || goalId >= n*m) {
                 cout << "Invalid start or goal ID!" << endl;
-                return {};
+                return {INT_MAX, {}};
             }
-            vector<int> G(n, INT_MAX);
-            vector<int> F(n, INT_MAX);
-            vector<int> pre(n, -1);
-            vector<int> vis(n, -1);
-            // vector<int> H(n, 0);
-            // int goalX = goalId % (int)sqrt(n);
-            // int goalY = goalId / (int)sqrt(n);
-            // for (int i = 0; i < n; i++) {
-            //     int x = i % (int)sqrt(n);
-            //     int y = i / (int)sqrt(n);
-            //     H[i] = abs(x - goalX) + abs(y - goalY);
-            // }
+            if (startId == goalId) {
+                return {0, {startId}};
+            }
+
+            int totalNode = n*m;
+
+            vector<int> G(totalNode, INT_MAX);
+            vector<int> F(totalNode, INT_MAX);
+            vector<int> pre(totalNode, -1);
+            vector<bool> vis(totalNode, false);
+            
+            // Heuristic
+            int goalX = goalId % m;
+            int goalY = goalId / m;
+            for (int i = 0; i < totalNode; i++) {
+                int x = i % m;
+                int y = i / m;
+                heuristic[i] = abs(x - goalX) + abs(y - goalY);
+            }
+
             G[startId] = 0;
-            F[startId] = H[startId];
-            vis[startId] = 1;
-            while (true) {
-                int current = -1;
-                int minF = INT_MAX;
-                
-                // Tìm node có F nhỏ nhất
-                for (int i = 0; i < n; i++) {
-                    if (vis[i] == 1 && F[i] < minF) {
-                        minF = F[i];
-                        current = i;
-                    }
-                }
-                
-                if (current == -1) {
-                    cout << "No path found!" << endl;
-                    return {};
-                }
-                
-                if (current == goalId) {
-                    // cout << "Path found! Cost: " << G[goalId] << endl;
-                    break;
-                }
-                
-                vis[current] = 0;
-                
-                // Duyệt neighbors
-                for (pair<int, int> neighbor : edge[current]) {
-                    int next = neighbor.first;
-                    int cost = neighbor.second;
-                    
-                    if (vis[next] == 1) {
-                        if (G[next] > G[current] + cost) {
-                            G[next] = G[current] + cost;
-                            F[next] = G[next] + H[next];
-                            pre[next] = current;
+            F[startId] = heuristic[startId];
+
+            priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;
+            pq.push({F[startId], startId});
+            vector<pair<int, int>> directions = {
+                {-1, 0},   // trái
+                {1, 0},    // phải  
+                {0, -1},   // lên
+                {0, 1},    // xuống
+                {-1, -1},  // trái-lên
+                {-1, 1},   // trái-xuống
+                {1, -1},   // phải-lên
+                {1, 1}     // phải-xuống
+            };
+
+            while(!pq.empty()) {
+                int current = pq.top().second;
+                int currentF = pq.top().first;
+                pq.pop();
+
+                if (vis[current]) continue;
+                vis[current] = true;
+
+                if (current == goalId) break;
+
+                int currentX = current % m;
+                int currentY = current / m;
+
+                for (pair<int, int> it:directions) {
+                    int newX = currentX + it.first;
+                    int newY = currentY + it.second;
+                    if (newX >= 0 && newX < m && newY >= 0 && newY < n) {
+                        int nextId = newY * m + newX;
+                        
+                        if (grid[newY][newX] != INT_MAX && !vis[nextId]) {
+                            int cost = 1; // Cost mặc định
+                            int newG = G[current] + cost;
+                            
+                            if (newG < G[nextId]) {
+                                G[nextId] = newG;
+                                pre[nextId] = current;
+                                int newF = newG + heuristic[nextId];
+                                F[nextId] = newF;
+                                pq.push({newF, nextId});
+                            }
                         }
-                    } else if (vis[next] == -1) {
-                        G[next] = G[current] + cost;
-                        F[next] = G[next] + H[next];
-                        pre[next] = current;
-                        vis[next] = 1;
                     }
                 }
             }
+
             vector<int> path;
             int node = goalId;
             while (node != -1) {
@@ -96,12 +167,6 @@ class RobotCleaning{
             }
             reverse(path.begin(), path.end());
             
-            // cout << "Path: ";
-            // for (int i = 0; i < path.size(); i++) {
-            //     cout << path[i];
-            //     if (i != path.size() - 1) cout << " -> ";
-            // }
-            // cout << endl;
             
             return {G[goalId], path};
         }
@@ -126,7 +191,7 @@ class RobotCleaning{
                         minPath = res.second;
                     }
                 }
-                if (minNode == -1) return ;
+                if (minNode == -1) break;
 
                 cout << "Move to node " << minNode << " (Cost: " << minCost << ")" << endl;
                 cout << "Path: ";
@@ -146,29 +211,17 @@ class RobotCleaning{
 };
 
 signed main() 
-{
-    freopen("input.txt", "r", stdin);
-    int n; cin >> n;
-    vector<vector<pair<int, int>>> edge;
-    vector<int> H;
-    edge.resize(n);
-    H.resize(n);
-    for (int i=0;i<n;i++) {
-        for (int j=0;j<n;j++) {
-            int w;
-            cin >> w;
-            if (w > 0) edge[i].push_back({j, w});
-        }
-    }
-    for (int i=0;i<n;i++) cin >> H[i];
-    RobotCleaning rb(n, edge, H);
-    // rb.findPath(0, 7);
-
-    // vector<int> sP = rb.findPath(0, 7).second;
-    // for (int v:sP) cout << v << " "; 
-    // cout << endl ;
-    // cout << rb.findPath(0, 7).first; 
+{ 
+    RobotCleaning rb;
+    
+    rb.initData();
+    rb.displayGrid();
+    cout << "\n";
+    
+    pair<int, vector<int>> test = rb.findPath(0, 7);
+    for (int v:test.second) cout << v << " "; 
+    cout << "\n" << test.first << "\n\n"; 
 
     vector<int> dirtyNodes = {2, 5, 7};
-    rb.cleanAllDirty(dirtyNodes, 0);
+    //rb.cleanAllDirty(dirtyNodes, 0);
 }   
