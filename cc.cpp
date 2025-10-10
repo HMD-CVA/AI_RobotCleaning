@@ -1,4 +1,5 @@
 #include<bits/stdc++.h>
+#include <limits>
 #include <unistd.h> // for usleep (Linux/Mac)
 // #include <windows.h> // for Sleep (Windows)
 using namespace std;
@@ -487,12 +488,18 @@ class RobotCleaning{
                 }
                 cout << endl;
             }
+            waitForEnter();
             
-            cout << "\nPress Enter to return to main menu..." << endl;
-            cin.ignore();
-            cin.get();
         }
-        
+        // Thêm hàm này ở đầu file (sau using namespace std;)
+        void waitForEnter() {
+            cout << "Press Enter to continue...";
+            cin.clear();
+            // Đọc và bỏ tất cả ký tự cho đến khi gặp newline
+            while (cin.get() != '\n') {
+                // Keep clearing
+            }
+        }
         bool isValidCoord(int x, int y) {
             return x >= 0 && x < m && y >= 0 && y < n;
         }
