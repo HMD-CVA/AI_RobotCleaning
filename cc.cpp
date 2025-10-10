@@ -2,10 +2,10 @@
 using namespace std;
 class RobotCleaning{
     private:
-        int n, m;
+        int n, m, startID, dockID;
         vector<vector<int>> grid;
         vector<vector<pair<int, int>>> edge;
-        vector<int> heuristic;
+        vector<int> heuristic, dirtyNode;
     public:
         void initData() {
             ifstream file("input.txt");
@@ -16,17 +16,34 @@ class RobotCleaning{
         
             file >> n >> m;
             grid.resize(n, vector<int> (m));
+            heuristic.resize(n * m);
             for (int i=0;i<n;i++) 
-                for (int j=0;j<m;j++) 
+                for (int j=0;j<m;j++) {
                     file >> grid[i][j];
+                    int id = coordToID(j, i, m);
+                    if (grid[i][j] == 8) startID = id;
+                    if (grid[i][j] == 9) dockID = id;
+                    if (grid[i][j] == 2) dirtyNode.push_back(id);
+                }
 
-            updateEdge();
+            // updateEdge();
             file.close();
             cout << "Robot initialized with " << n << " nodes" << endl;     
-        }   
+        }  
+        int getStartID() {
+            return startID;
+        } 
+        vector<int> getDirtyNode() {
+            return dirtyNode;
+        }
+        int getDockID() {
+            return dockID;
+        }
         RobotCleaning() {
             n = 0;
             m = 0;
+            startID = -1;
+            dockID = -1;
         }
         RobotCleaning(int _n, vector<vector<pair<int, int>>> _edge, vector<int> _H){
             n = _n;
@@ -36,7 +53,7 @@ class RobotCleaning{
         }
         void updateEdge() {
             edge.resize(n);
-            heuristic.resize(n * m);
+           
             for (int i=0;i<n;i++) {
                 for (int j=0;j<m;j++) {
                     if (grid[i][j] > 0 && grid[i][j]!=INT_MAX) edge[i].push_back({j, grid[i][j]});
@@ -74,9 +91,10 @@ class RobotCleaning{
         void displayGrid() {
             for (int i=0;i<n;i++) {
                 for (int j=0;j<m;j++) {
-                    if (grid[i][j] == INT_MAX) cout << "C"; 
-                    else if (grid[i][j] == -1) cout << "D";
-                    else cout << grid[i][j];
+                    // if (grid[i][j] == 1) cout << "C"; 
+                    // else if (grid[i][j] == 2) cout << "D";
+                    // else 
+                    cout << grid[i][j];
                     cout << " ";
                 }
                 cout << "\n";
@@ -143,7 +161,7 @@ class RobotCleaning{
                     if (newX >= 0 && newX < m && newY >= 0 && newY < n) {
                         int nextId = newY * m + newX;
                         
-                        if (grid[newY][newX] != INT_MAX && !vis[nextId]) {
+                        if (grid[newY][newX] != 1 && !vis[nextId]) { // (grid[newY][newX] == 0 || grid[newY][newX] == 2)
                             int cost = 1; // Cost mặc định
                             int newG = G[current] + cost;
                             
@@ -166,47 +184,134 @@ class RobotCleaning{
                 node = pre[node];
             }
             reverse(path.begin(), path.end());
-            
-            
             return {G[goalId], path};
         }
+        // void cleanAllDirty(vector<int> dirtyNodes, int startId) {
+        //     if (dirtyNodes.empty()) {
+        //         cout << "No dirty nodes!" << endl;
+        //         return;
+        //     }
+        //     int current = startId;
+        //     vector<int> remainingDirt = dirtyNodes;
+        //     int totalCost = 0;
+            
+        //     while (!remainingDirt.empty()) {
+        //         cout << current << " ";
+        //         int minCost = INT_MAX, minNode = -1;
+        //         vector<int> minPath;
+        //         for (int i=0;i<remainingDirt.size();i++) {
+        //             pair<int, vector<int>> res = findPath(current, remainingDirt[i]);
+        //             if (minCost > res.first) {
+        //                 minCost = res.first;
+        //                 minNode = remainingDirt[i];
+        //                 minPath = res.second;
+        //             }
+        //         }
+        //         if (minNode == -1) break;
+
+        //         cout << "Move to node " << minNode << " (Cost: " << minCost << ")" << endl;
+        //         cout << "Path: ";
+        //         for (int node : minPath) cout << node << " ";
+        //             cout << endl;
+                
+        //         totalCost += minCost;
+        //         current = minNode;
+        //         remainingDirt.erase(
+        //             remove(remainingDirt.begin(), remainingDirt.end(), minNode),
+        //             remainingDirt.end()
+        //         );
+        //         cout << "Cleaned node " << minNode << ". Remaining: " << remainingDirt.size() << " nodes" << endl;
+        //     }
+        //     cout << "Total: " << totalCost ;
+        // }
+
         void cleanAllDirty(vector<int> dirtyNodes, int startId) {
             if (dirtyNodes.empty()) {
-                cout << "No dirty nodes!" << endl;
+                cout << "No dirty nodes to clean!" << endl;
                 return;
             }
+            
+            cout << "\n=== START CLEANING ===" << endl;
+            cout << "Total dirty nodes: " << dirtyNodes.size() << endl;
+            
             int current = startId;
             vector<int> remainingDirt = dirtyNodes;
             int totalCost = 0;
+            int step = 1;
             
             while (!remainingDirt.empty()) {
-                cout << current << " ";
+                cout << "\n--- Step " << step++ << " ---" << endl;
+                cout << "Current position: " << current;
+                auto coord = idToCoord(current, m);
+                cout << " (" << coord.first << "," << coord.second << ")" << endl;
+                
                 int minCost = INT_MAX, minNode = -1;
                 vector<int> minPath;
-                for (int i=0;i<remainingDirt.size();i++) {
-                    pair<int, vector<int>> res = findPath(current, remainingDirt[i]);
-                    if (minCost > res.first) {
-                        minCost = res.first;
-                        minNode = remainingDirt[i];
-                        minPath = res.second;
+                
+                // Find nearest dirty node
+                for (int i = 0; i < remainingDirt.size(); i++) {
+                    int dirtyId = remainingDirt[i];
+                    auto result = findPath(current, dirtyId);
+                    
+                    cout << "  Check dirty node " << dirtyId;
+                    auto dirtyCoord = idToCoord(dirtyId, m);
+                    cout << " (" << dirtyCoord.first << "," << dirtyCoord.second << ") - ";
+                    
+                    if (result.first == INT_MAX) {
+                        cout << "NO PATH" << endl;
+                    } else {
+                        cout << "Cost: " << result.first << endl;
+                        if (result.first < minCost) {
+                            minCost = result.first;
+                            minNode = dirtyId;
+                            minPath = result.second;
+                        }
                     }
                 }
-                if (minNode == -1) break;
-
-                cout << "Move to node " << minNode << " (Cost: " << minCost << ")" << endl;
+                
+                if (minNode == -1) {
+                    cout << "ERROR: Cannot reach any remaining dirty nodes!" << endl;
+                    cout << "Remaining nodes: ";
+                    for (int node : remainingDirt) {
+                        auto coord = idToCoord(node, m);
+                        cout << node << "(" << coord.first << "," << coord.second << ") ";
+                    }
+                    cout << endl;
+                    break;
+                }
+                
+                auto dirtyCoord = idToCoord(minNode, m);
+                cout << "Moving to dirty node " << minNode << " (" << dirtyCoord.first << "," << dirtyCoord.second << ")" << endl;
+                cout << "Cost: " << minCost << endl;
                 cout << "Path: ";
                 for (int node : minPath) cout << node << " ";
-                    cout << endl;
+                cout << endl;
                 
                 totalCost += minCost;
                 current = minNode;
+                
+                // Remove cleaned node
                 remainingDirt.erase(
                     remove(remainingDirt.begin(), remainingDirt.end(), minNode),
                     remainingDirt.end()
                 );
-                cout << "Cleaned node " << minNode << ". Remaining: " << remainingDirt.size() << " nodes" << endl;
+                
+                cout << "Cleaned! Remaining: " << remainingDirt.size() << " nodes" << endl;
             }
-            cout << "Total: " << totalCost ;
+            
+            cout << "\n=== CLEANING COMPLETED ===" << endl;
+            cout << "Total cost: " << totalCost << endl;
+            cout << "Final position: " << current << endl;
+            
+            // Go back to dock
+            auto dockPath = findPath(current, dockID);
+            if (dockPath.first != INT_MAX) {
+                cout << "Returning to dock, cost: " << dockPath.first << endl;
+                totalCost += dockPath.first;
+                cout << "Total cost including return: " << totalCost << endl;
+            } else {
+                cout << "Cannot return to dock!" << endl;
+            }
         }
 };
 
@@ -216,12 +321,11 @@ signed main()
     
     rb.initData();
     rb.displayGrid();
-    cout << "\n";
+    cout << "\n";// << rb.getDockID() << "\n";
     
-    pair<int, vector<int>> test = rb.findPath(0, 7);
+    pair<int, vector<int>> test = rb.findPath(rb.getStartID(), rb.getDockID());
     for (int v:test.second) cout << v << " "; 
     cout << "\n" << test.first << "\n\n"; 
 
-    vector<int> dirtyNodes = {2, 5, 7};
-    //rb.cleanAllDirty(dirtyNodes, 0);
+    rb.cleanAllDirty(rb.getDirtyNode(), rb.getStartID());
 }   
