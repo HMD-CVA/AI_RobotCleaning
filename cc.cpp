@@ -301,7 +301,7 @@ class RobotCleaning{
             
             // Hiển thị trạng thái ban đầu
             displayAnimatedGrid(displayGrid, current, remainingDirt, 0, totalCost, "Ready to start");
-            delay(2000);
+            delay(500);
             
             while (!remainingDirt.empty()) {
                 // Tìm node gần nhất
@@ -320,14 +320,14 @@ class RobotCleaning{
                 
                 if (nearestNode == -1) {
                     displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "Cannot reach remaining nodes!");
-                    delay(3000);
+                    delay(1000);
                     break;
                 }
                 
                 // ANIMATION: Di chuyển đến node bẩn
                 displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
                                   "Moving to dirty node " + to_string(nearestNode));
-                delay(1000);
+                delay(500);
                 
                 // Di chuyển từng bước với animation - SỬA LỖI 2 CHỮ R
                 for (int i=1; i<bestPath.size(); i++) {
@@ -359,7 +359,7 @@ class RobotCleaning{
                     // Hiển thị animation
                     displayAnimatedGrid(tempGrid, bestPath[i], remainingDirt, step, totalCost + i,
                                       "Moving... (" + to_string(i) + "/" + to_string(bestPath.size()-1) + ")");
-                    delay(500);
+                    delay(250);
                 }
                 
                 // Cập nhật grid chính thức sau khi hoàn thành di chuyển
@@ -383,20 +383,20 @@ class RobotCleaning{
                 
                 // Hiển thị kết quả sau khi dọn
                 displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "Cleaned node " + to_string(nearestNode) + "! Remaining: " + to_string(remainingDirt.size()));
-                delay(1500);
+                delay(500);
                 
                 step++;
                 
                 if (!remainingDirt.empty()) {
                     displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "Planning next move...");
-                    delay(1000);
+                    delay(250);
                 }
             }
             
             // Quay về dock với animation - SỬA LỖI 2 CHỮ R
             if (remainingDirt.empty()) {
                 displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "All clean! Returning to dock...");
-                delay(2000);
+                delay(250);
                 
                 auto dockResult = findPath(current, dockID);
                 if (dockResult.first != INT_MAX) {
@@ -429,7 +429,7 @@ class RobotCleaning{
                         
                         displayAnimatedGrid(tempGrid, dockPath[i], remainingDirt, step, totalCost + i,
                                           "Returning to dock... (" + to_string(i) + "/" + to_string(dockPath.size()-1) + ")");
-                        delay(500);
+                        delay(250);
                     }
                     
                     totalCost += dockResult.first;
