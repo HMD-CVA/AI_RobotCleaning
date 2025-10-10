@@ -1,4 +1,6 @@
 #include<bits/stdc++.h>
+#include <unistd.h> // for usleep (Linux/Mac)
+// #include <windows.h> // for Sleep (Windows)
 using namespace std;
 
 class RobotCleaning{
@@ -8,13 +10,12 @@ class RobotCleaning{
         vector<vector<pair<int, int>>> edge;
         vector<int> heuristic, dirtyNode;
         
-        // Ký hiệu cho grid
         static const int EMPTY = 0;
         static const int OBSTACLE = 1;
         static const int DIRTY = 2;
         static const int ROBOT = 8;
         static const int DOCK = 9;
-        static const int PATH = 3; // Để hiển thị đường đi
+        static const int PATH = 4;
         
     public:
         void initData() {
@@ -60,10 +61,31 @@ class RobotCleaning{
             cout << "Grid saved to input.txt" << endl;
         }
         
-        // Tính năng 1: Hiển thị grid với ký hiệu đẹp
-        void displayGridWithSymbols() {
-            cout << "\n=== CURRENT GRID ===" << endl;
-            cout << "Legend: R=Robot, D=Dock, X=Obstacle, *=Dirty, .=Empty, o=Path" << endl << endl;
+        void clearScreen() {
+            #ifdef _WIN32
+                system("cls");
+            #else
+                system("clear");
+            #endif
+        }
+        
+        void delay(int milliseconds) {
+            #ifdef _WIN32
+                Sleep(milliseconds);
+            #else
+                usleep(milliseconds * 1000);
+            #endif
+        }
+        
+        // Hiển thị grid với animation đẹp
+        void displayAnimatedGrid(const vector<vector<int>>& displayGrid, int currentPos, 
+                               const vector<int>& remainingDirt, int step, int totalCost, 
+                               const string& status = "") {
+            clearScreen();
+            cout << "=== ROBOT CLEANING ANIMATION ===" << endl;
+            cout << "Step: " << step << " | Total Cost: " << totalCost << endl;
+            if (!status.empty()) cout << "Status: " << status << endl;
+            cout << "Legend: R=Robot, D=Dock, X=Obstacle, *=Dirty, .=Empty, -=Path" << endl << endl;
             
             // Hiển thị số cột
             cout << "   ";
@@ -71,32 +93,44 @@ class RobotCleaning{
             cout << endl;
             
             for (int i=0;i<n;i++) {
-                cout << setw(2) << i << " "; // Số hàng
+                cout << setw(2) << i << " ";
                 for (int j=0;j<m;j++) {
                     char symbol;
-                    switch(grid[i][j]) {
-                        case ROBOT: symbol = 'R'; break;
-                        case DOCK: symbol = 'D'; break;
-                        case OBSTACLE: symbol = 'X'; break;
-                        case DIRTY: symbol = '*'; break;
-                        case PATH: symbol = 'o'; break;
-                        case EMPTY: symbol = '.'; break;
-                        default: symbol = '?';
+                    int cellValue = displayGrid[i][j];
+                    
+                    if (cellValue == ROBOT) symbol = 'R';
+                    else if (cellValue == DOCK) symbol = 'D';
+                    else if (cellValue == OBSTACLE) symbol = 'X';
+                    else if (cellValue == DIRTY) {
+                        int id = coordToID(j, i, m);
+                        if (find(remainingDirt.begin(), remainingDirt.end(), id) != remainingDirt.end()) {
+                            symbol = '*';
+                        } else {
+                            symbol = '.';
+                        }
                     }
+                    else if (cellValue == PATH) symbol = '-';
+                    else if (cellValue == EMPTY) symbol = '.';
+                    else symbol = '?';
+                    
                     cout << " " << symbol << " ";
                 }
                 cout << endl;
             }
             
             // Hiển thị thông tin
-            auto robotCoord = idToCoord(startID, m);
-            auto dockCoord = idToCoord(dockID, m);
-            cout << "\nRobot position: " << startID << " (" << robotCoord.first << "," << robotCoord.second << ")";
-            cout << "\nDock position: " << dockID << " (" << dockCoord.first << "," << dockCoord.second << ")";
-            cout << "\nDirty nodes: " << dirtyNode.size() << endl;
+            auto currentCoord = idToCoord(currentPos, m);
+            cout << "\nRobot at: " << currentPos << " (" << currentCoord.first << "," << currentCoord.second << ")";
+            cout << " | Remaining dirty: " << remainingDirt.size() << endl;
         }
         
-        // Tính năng 2: Thay đổi grid
+        void displayGridWithSymbols() {
+            displayAnimatedGrid(grid, startID, dirtyNode, 0, 0, "Current State");
+            cout << "\nPress Enter to continue..." << endl;
+            cin.ignore();
+            cin.get();
+        }
+        
         void modifyGrid() {
             int choice;
             do {
@@ -118,13 +152,14 @@ class RobotCleaning{
                         cout << "Enter new robot coordinates (x y): ";
                         cin >> x >> y;
                         if (isValidCoord(x, y)) {
-                            // Xóa vị trí robot cũ
+                            if (grid[y][x] == OBSTACLE) {
+                                cout << "ERROR: Cannot place robot on obstacle!" << endl;
+                                break;
+                            }
                             auto oldCoord = idToCoord(startID, m);
                             grid[oldCoord.second][oldCoord.first] = EMPTY;
-                            
-                            // Đặt robot mới
                             startID = coordToID(x, y, m);
-                            grid[x][y] = ROBOT;
+                            grid[y][x] = ROBOT;
                             cout << "Robot moved to (" << x << "," << y << ")" << endl;
                         } else {
                             cout << "Invalid coordinates!" << endl;
@@ -135,13 +170,14 @@ class RobotCleaning{
                         cout << "Enter new dock coordinates (x y): ";
                         cin >> x >> y;
                         if (isValidCoord(x, y)) {
-                            // Xóa dock cũ
+                            if (grid[y][x] == OBSTACLE) {
+                                cout << "ERROR: Cannot place dock on obstacle!" << endl;
+                                break;
+                            }
                             auto oldCoord = idToCoord(dockID, m);
                             grid[oldCoord.second][oldCoord.first] = EMPTY;
-                            
-                            // Đặt dock mới
                             dockID = coordToID(x, y, m);
-                            grid[x][y] = DOCK;
+                            grid[y][x] = DOCK;
                             cout << "Dock moved to (" << x << "," << y << ")" << endl;
                         } else {
                             cout << "Invalid coordinates!" << endl;
@@ -152,8 +188,18 @@ class RobotCleaning{
                         cout << "Enter obstacle coordinates (x y): ";
                         cin >> x >> y;
                         if (isValidCoord(x, y)) {
-                            grid[x][y] = OBSTACLE;
-                            cout << "Obstacle added at (" << x << "," << y << ")" << endl;
+                            if (grid[y][x] == ROBOT) {
+                                cout << "ERROR: Cannot place obstacle on robot position!" << endl;
+                            } else if (grid[y][x] == DOCK) {
+                                cout << "ERROR: Cannot place obstacle on dock position!" << endl;
+                            } else if (grid[y][x] == DIRTY) {
+                                cout << "ERROR: Cannot place obstacle on dirty spot!" << endl;
+                            } else if (grid[y][x] == OBSTACLE) {
+                                cout << "ERROR: There is already an obstacle here!" << endl;
+                            } else {
+                                grid[y][x] = OBSTACLE;
+                                cout << "Obstacle added at (" << x << "," << y << ")" << endl;
+                            }
                         } else {
                             cout << "Invalid coordinates!" << endl;
                         }
@@ -162,11 +208,15 @@ class RobotCleaning{
                     case 4: // Xóa vật cản
                         cout << "Enter obstacle coordinates to remove (x y): ";
                         cin >> x >> y;
-                        if (isValidCoord(x, y) && grid[x][y] == OBSTACLE) {
-                            grid[x][y] = EMPTY;
-                            cout << "Obstacle removed from (" << x << "," << y << ")" << endl;
+                        if (isValidCoord(x, y)) {
+                            if (grid[y][x] == OBSTACLE) {
+                                grid[y][x] = EMPTY;
+                                cout << "Obstacle removed from (" << x << "," << y << ")" << endl;
+                            } else {
+                                cout << "ERROR: No obstacle at this position!" << endl;
+                            }
                         } else {
-                            cout << "Invalid coordinates or no obstacle!" << endl;
+                            cout << "Invalid coordinates!" << endl;
                         }
                         break;
                         
@@ -174,9 +224,19 @@ class RobotCleaning{
                         cout << "Enter dirty spot coordinates (x y): ";
                         cin >> x >> y;
                         if (isValidCoord(x, y)) {
-                            grid[x][y] = DIRTY;
-                            dirtyNode.push_back(coordToID(x, y, m));
-                            cout << "Dirty spot added at (" << x << "," << y << ")" << endl;
+                            if (grid[y][x] == OBSTACLE) {
+                                cout << "ERROR: Cannot place dirty spot on obstacle!" << endl;
+                            } else if (grid[y][x] == ROBOT) {
+                                cout << "ERROR: Cannot place dirty spot on robot position!" << endl;
+                            } else if (grid[y][x] == DOCK) {
+                                cout << "ERROR: Cannot place dirty spot on dock position!" << endl;
+                            } else if (grid[y][x] == DIRTY) {
+                                cout << "ERROR: There is already a dirty spot here!" << endl;
+                            } else {
+                                grid[y][x] = DIRTY;
+                                dirtyNode.push_back(coordToID(x, y, m));
+                                cout << "Dirty spot added at (" << x << "," << y << ")" << endl;
+                            }
                         } else {
                             cout << "Invalid coordinates!" << endl;
                         }
@@ -185,13 +245,17 @@ class RobotCleaning{
                     case 6: // Xóa vết bẩn
                         cout << "Enter dirty spot coordinates to remove (x y): ";
                         cin >> x >> y;
-                        if (isValidCoord(x, y) && grid[x][y] == DIRTY) {
-                            grid[x][y] = EMPTY;
-                            id = coordToID(x, y, m);
-                            dirtyNode.erase(remove(dirtyNode.begin(), dirtyNode.end(), id), dirtyNode.end());
-                            cout << "Dirty spot removed from (" << x << "," << y << ")" << endl;
+                        if (isValidCoord(x, y)) {
+                            if (grid[y][x] == DIRTY) {
+                                grid[y][x] = EMPTY;
+                                id = coordToID(x, y, m);
+                                dirtyNode.erase(remove(dirtyNode.begin(), dirtyNode.end(), id), dirtyNode.end());
+                                cout << "Dirty spot removed from (" << x << "," << y << ")" << endl;
+                            } else {
+                                cout << "ERROR: No dirty spot at this position!" << endl;
+                            }
                         } else {
-                            cout << "Invalid coordinates or no dirty spot!" << endl;
+                            cout << "Invalid coordinates!" << endl;
                         }
                         break;
                         
@@ -209,12 +273,15 @@ class RobotCleaning{
                 }
                 
                 // Hiển thị grid sau mỗi thay đổi
-                displayGridWithSymbols();
+                displayAnimatedGrid(grid, startID, dirtyNode, 0, 0, "Grid Modified");
+                cout << "\nPress Enter to continue..." << endl;
+                cin.ignore();
+                cin.get();
                 
             } while (choice != 7 && choice != 8);
         }
         
-        // Tính năng 3: Dọn dẹp với hiển thị trực quan
+        // Tính năng 3: Dọn dẹp với animation mượt mà
         void cleanWithVisualization() {
             if (dirtyNode.empty()) {
                 cout << "No dirty nodes to clean!" << endl;
@@ -222,8 +289,10 @@ class RobotCleaning{
             }
             
             cout << "\n=== CLEANING VISUALIZATION ===" << endl;
+            cout << "Press Enter to start animation..." << endl;
+            cin.ignore();
+            cin.get();
             
-            // Tạo bản sao của grid để hiển thị
             vector<vector<int>> displayGrid = grid;
             int current = startID;
             vector<int> remainingDirt = dirtyNode;
@@ -231,12 +300,10 @@ class RobotCleaning{
             int step = 1;
             
             // Hiển thị trạng thái ban đầu
-            cout << "\nInitial state:" << endl;
-            displayVisualGrid(displayGrid, current, remainingDirt);
+            displayAnimatedGrid(displayGrid, current, remainingDirt, 0, totalCost, "Ready to start");
+            delay(2000);
             
             while (!remainingDirt.empty()) {
-                cout << "\n--- Step " << step++ << " ---" << endl;
-                
                 // Tìm node gần nhất
                 int minCost = INT_MAX;
                 int nearestNode = -1;
@@ -252,20 +319,50 @@ class RobotCleaning{
                 }
                 
                 if (nearestNode == -1) {
-                    cout << "Cannot reach any remaining dirty nodes!" << endl;
+                    displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "Cannot reach remaining nodes!");
+                    delay(3000);
                     break;
                 }
                 
-                // Hiển thị đường đi
-                cout << "Moving to dirty node " << nearestNode << " (Cost: " << minCost << ")" << endl;
-                cout << "Path: ";
-                for (int i=0; i<bestPath.size(); i++) {
-                    cout << bestPath[i];
-                    if (i != bestPath.size()-1) cout << " -> ";
-                }
-                cout << endl;
+                // ANIMATION: Di chuyển đến node bẩn
+                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                  "Moving to dirty node " + to_string(nearestNode));
+                delay(1000);
                 
-                // Cập nhật display grid với đường đi (bỏ qua điểm đầu và cuối)
+                // Di chuyển từng bước với animation - SỬA LỖI 2 CHỮ R
+                for (int i=1; i<bestPath.size(); i++) {
+                    // Tạo grid tạm thời cho animation - LUÔN bắt đầu từ displayGrid gốc
+                    vector<vector<int>> tempGrid = displayGrid;
+                    
+                    // Đánh dấu đường đi đã qua (không bao gồm vị trí hiện tại)
+                    for (int j=1; j<i; j++) {
+                        auto pathCoord = idToCoord(bestPath[j], m);
+                        if (tempGrid[pathCoord.second][pathCoord.first] == EMPTY) {
+                            tempGrid[pathCoord.second][pathCoord.first] = PATH;
+                        }
+                    }
+                    
+                    // QUAN TRỌNG: Đảm bảo chỉ có 1 chữ R duy nhất
+                    // Xóa robot khỏi tất cả các vị trí trước đó
+                    for (int y=0; y<n; y++) {
+                        for (int x=0; x<m; x++) {
+                            if (tempGrid[y][x] == ROBOT) {
+                                tempGrid[y][x] = EMPTY;
+                            }
+                        }
+                    }
+                    
+                    // Đặt robot ở vị trí mới
+                    auto newCoord = idToCoord(bestPath[i], m);
+                    tempGrid[newCoord.second][newCoord.first] = ROBOT;
+                    
+                    // Hiển thị animation
+                    displayAnimatedGrid(tempGrid, bestPath[i], remainingDirt, step, totalCost + i,
+                                      "Moving... (" + to_string(i) + "/" + to_string(bestPath.size()-1) + ")");
+                    delay(500);
+                }
+                
+                // Cập nhật grid chính thức sau khi hoàn thành di chuyển
                 for (int i=1; i<bestPath.size()-1; i++) {
                     auto coord = idToCoord(bestPath[i], m);
                     if (displayGrid[coord.second][coord.first] == EMPTY) {
@@ -273,50 +370,97 @@ class RobotCleaning{
                     }
                 }
                 
-                // Di chuyển robot
+                // Cập nhật vị trí robot và xóa vết bẩn
                 auto oldCoord = idToCoord(current, m);
-                displayGrid[oldCoord.second][oldCoord.first] = EMPTY; // Xóa robot cũ
+                displayGrid[oldCoord.second][oldCoord.first] = PATH;
                 
                 current = nearestNode;
                 auto newCoord = idToCoord(current, m);
-                displayGrid[newCoord.second][newCoord.first] = ROBOT; // Đặt robot mới
+                displayGrid[newCoord.second][newCoord.first] = ROBOT;
                 
-                // Xóa vết bẩn
-                displayGrid[newCoord.second][newCoord.first] = ROBOT; // Robot đứng trên vết bẩn đã dọn
                 remainingDirt.erase(remove(remainingDirt.begin(), remainingDirt.end(), nearestNode), remainingDirt.end());
-                
                 totalCost += minCost;
                 
-                // Hiển thị grid sau bước di chuyển
-                displayVisualGrid(displayGrid, current, remainingDirt);
-                cout << "Total cost so far: " << totalCost << endl;
-            }
-            
-            // Quay về dock
-            cout << "\n--- Returning to dock ---" << endl;
-            auto dockPath = findPath(current, dockID);
-            if (dockPath.first != INT_MAX) {
-                // Hiển thị đường về dock
-                for (int i=1; i<dockPath.second.size()-1; i++) {
-                    auto coord = idToCoord(dockPath.second[i], m);
-                    if (displayGrid[coord.second][coord.first] == EMPTY) {
-                        displayGrid[coord.second][coord.first] = PATH;
-                    }
+                // Hiển thị kết quả sau khi dọn
+                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                  "Cleaned node " + to_string(nearestNode) + "! Remaining: " + to_string(remainingDirt.size()));
+                delay(1500);
+                
+                step++;
+                
+                if (!remainingDirt.empty()) {
+                    displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                      "Planning next move...");
+                    delay(1000);
                 }
-                
-                // Di chuyển robot về dock
-                auto oldCoord = idToCoord(current, m);
-                displayGrid[oldCoord.second][oldCoord.first] = EMPTY;
-                displayGrid[idToCoord(dockID, m).second][idToCoord(dockID, m).first] = ROBOT;
-                
-                totalCost += dockPath.first;
-                
-                cout << "Final state (robot at dock):" << endl;
-                displayVisualGrid(displayGrid, dockID, remainingDirt);
-                cout << "Total cleaning cost including return: " << totalCost << endl;
             }
             
-            cout << "\n=== CLEANING COMPLETED ===" << endl;
+            // Quay về dock với animation - SỬA LỖI 2 CHỮ R
+            if (remainingDirt.empty()) {
+                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                  "All clean! Returning to dock...");
+                delay(2000);
+                
+                auto dockResult = findPath(current, dockID);
+                if (dockResult.first != INT_MAX) {
+                    vector<int> dockPath = dockResult.second;
+                    
+                    // Animation di chuyển về dock
+                    for (int i=1; i<dockPath.size(); i++) {
+                        vector<vector<int>> tempGrid = displayGrid;
+                        
+                        // Đánh dấu đường đi
+                        for (int j=1; j<i; j++) {
+                            auto pathCoord = idToCoord(dockPath[j], m);
+                            if (tempGrid[pathCoord.second][pathCoord.first] == EMPTY) {
+                                tempGrid[pathCoord.second][pathCoord.first] = PATH;
+                            }
+                        }
+                        
+                        // QUAN TRỌNG: Đảm bảo chỉ có 1 chữ R duy nhất
+                        // Xóa robot khỏi tất cả các vị trí
+                        for (int y=0; y<n; y++) {
+                            for (int x=0; x<m; x++) {
+                                if (tempGrid[y][x] == ROBOT) {
+                                    tempGrid[y][x] = EMPTY;
+                                }
+                            }
+                        }
+                        
+                        // Đặt robot ở vị trí mới
+                        auto newCoord = idToCoord(dockPath[i], m);
+                        tempGrid[newCoord.second][newCoord.first] = ROBOT;
+                        
+                        displayAnimatedGrid(tempGrid, dockPath[i], remainingDirt, step, totalCost + i,
+                                          "Returning to dock... (" + to_string(i) + "/" + to_string(dockPath.size()-1) + ")");
+                        delay(500);
+                    }
+                    
+                    totalCost += dockResult.first;
+                    
+                    // Cập nhật grid cuối cùng - Đảm bảo chỉ có 1 chữ R
+                    for (int y=0; y<n; y++) {
+                        for (int x=0; x<m; x++) {
+                            if (displayGrid[y][x] == ROBOT) {
+                                displayGrid[y][x] = PATH;
+                            }
+                        }
+                    }
+                    
+                    // Đặt robot ở dock
+                    displayGrid[idToCoord(dockID, m).second][idToCoord(dockID, m).first] = ROBOT;
+                    
+                    displayAnimatedGrid(displayGrid, dockID, remainingDirt, step, totalCost, 
+                                      "Mission Complete! Robot at dock.");
+                } else {
+                    displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                      "Cannot return to dock!");
+                }
+            }
+            
+            cout << "\nPress Enter to return to main menu..." << endl;
+            cin.ignore();
+            cin.get();
         }
         
     private:
@@ -324,41 +468,7 @@ class RobotCleaning{
             return x >= 0 && x < m && y >= 0 && y < n;
         }
         
-        void displayVisualGrid(const vector<vector<int>>& visualGrid, int currentPos, const vector<int>& remainingDirt) {
-            cout << "   ";
-            for (int j=0;j<m;j++) cout << setw(2) << j << " ";
-            cout << endl;
-            
-            for (int i=0;i<n;i++) {
-                cout << setw(2) << i << " ";
-                for (int j=0;j<m;j++) {
-                    char symbol;
-                    switch(visualGrid[i][j]) {
-                        case ROBOT: symbol = 'R'; break;
-                        case DOCK: symbol = 'D'; break;
-                        case OBSTACLE: symbol = 'X'; break;
-                        case DIRTY: {
-                            // Kiểm tra xem vết bẩn này còn không
-                            int id = coordToID(j, i, m);
-                            if (find(remainingDirt.begin(), remainingDirt.end(), id) != remainingDirt.end()) {
-                                symbol = '*';
-                            } else {
-                                symbol = '.'; // Đã dọn
-                            }
-                            break;
-                        }
-                        case PATH: symbol = 'o'; break;
-                        case EMPTY: symbol = '.'; break;
-                        default: symbol = '?';
-                    }
-                    cout << " " << symbol << " ";
-                }
-                cout << endl;
-            }
-        }
-        
     public:
-        // Các hàm cũ giữ nguyên
         int getStartID() { return startID; } 
         void setStartID(int _id) { startID = _id; }
         void setDockID(int _id) { dockID = _id; }
@@ -379,15 +489,6 @@ class RobotCleaning{
             return {x, y};
         }
         
-        void displayGrid() {
-            for (int i=0;i<n;i++) {
-                for (int j=0;j<m;j++) {
-                    cout << grid[i][j] << " ";
-                }
-                cout << "\n";
-            }
-        }
-        
         pair<int , vector<int>> findPath(int startId, int goalId) {
             if (startId < 0 || startId >= n*m || goalId < 0 || goalId >= n*m) {
                 return {INT_MAX, {}};
@@ -402,7 +503,6 @@ class RobotCleaning{
             vector<int> pre(totalNode, -1);
             vector<bool> vis(totalNode, false);
             
-            // Heuristic
             int goalX = goalId % m;
             int goalY = goalId / m;
             for (int i = 0; i < totalNode; i++) {
@@ -471,10 +571,16 @@ signed main() {
     
     int choice;
     do {
+        #ifdef _WIN32
+            system("cls");
+        #else
+            system("clear");
+        #endif
+        
         cout << "\n=== ROBOT CLEANING SYSTEM ===" << endl;
         cout << "1. View current grid and robot position" << endl;
         cout << "2. Modify grid (robot, dock, obstacles, dirty spots)" << endl;
-        cout << "3. Clean all dirty spots with visualization" << endl;
+        cout << "3. Clean all dirty spots with ANIMATION" << endl;
         cout << "4. Exit" << endl;
         cout << "Choose: ";
         cin >> choice;
@@ -494,6 +600,9 @@ signed main() {
                 break;
             default:
                 cout << "Invalid choice!" << endl;
+                cout << "Press Enter to continue..." << endl;
+                cin.ignore();
+                cin.get();
         }
     } while (choice != 4);
     
