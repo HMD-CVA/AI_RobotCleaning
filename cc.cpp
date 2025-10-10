@@ -8,13 +8,13 @@ class RobotCleaning{
         vector<vector<pair<int, int>>> edge;
         vector<int> heuristic, dirtyNode;
         
-        // Định nghĩa các hằng số là static const
+        // Ký hiệu cho grid
         static const int EMPTY = 0;
         static const int OBSTACLE = 1;
         static const int DIRTY = 2;
         static const int ROBOT = 8;
         static const int DOCK = 9;
-        static const int PATH = 3;
+        static const int PATH = 3; // Để hiển thị đường đi
         
     public:
         void initData() {
@@ -74,17 +74,15 @@ class RobotCleaning{
                 cout << setw(2) << i << " "; // Số hàng
                 for (int j=0;j<m;j++) {
                     char symbol;
-                    int cellValue = grid[i][j];
-                    
-                    // Dùng if-else thay vì switch-case
-                    if (cellValue == ROBOT) symbol = 'R';
-                    else if (cellValue == DOCK) symbol = 'D';
-                    else if (cellValue == OBSTACLE) symbol = 'X';
-                    else if (cellValue == DIRTY) symbol = '*';
-                    else if (cellValue == PATH) symbol = 'o';
-                    else if (cellValue == EMPTY) symbol = '.';
-                    else symbol = '?';
-                    
+                    switch(grid[i][j]) {
+                        case ROBOT: symbol = 'R'; break;
+                        case DOCK: symbol = 'D'; break;
+                        case OBSTACLE: symbol = 'X'; break;
+                        case DIRTY: symbol = '*'; break;
+                        case PATH: symbol = 'o'; break;
+                        case EMPTY: symbol = '.'; break;
+                        default: symbol = '?';
+                    }
                     cout << " " << symbol << " ";
                 }
                 cout << endl;
@@ -120,19 +118,13 @@ class RobotCleaning{
                         cout << "Enter new robot coordinates (x y): ";
                         cin >> x >> y;
                         if (isValidCoord(x, y)) {
-                            // KIỂM TRA: Không cho đặt robot lên vật cản
-                            if (grid[y][x] == OBSTACLE) {
-                                cout << "ERROR: Cannot place robot on obstacle!" << endl;
-                                break;
-                            }
-                            
                             // Xóa vị trí robot cũ
                             auto oldCoord = idToCoord(startID, m);
                             grid[oldCoord.second][oldCoord.first] = EMPTY;
                             
                             // Đặt robot mới
                             startID = coordToID(x, y, m);
-                            grid[y][x] = ROBOT;
+                            grid[x][y] = ROBOT;
                             cout << "Robot moved to (" << x << "," << y << ")" << endl;
                         } else {
                             cout << "Invalid coordinates!" << endl;
@@ -143,19 +135,13 @@ class RobotCleaning{
                         cout << "Enter new dock coordinates (x y): ";
                         cin >> x >> y;
                         if (isValidCoord(x, y)) {
-                            // KIỂM TRA: Không cho đặt dock lên vật cản
-                            if (grid[y][x] == OBSTACLE) {
-                                cout << "ERROR: Cannot place dock on obstacle!" << endl;
-                                break;
-                            }
-                            
                             // Xóa dock cũ
                             auto oldCoord = idToCoord(dockID, m);
                             grid[oldCoord.second][oldCoord.first] = EMPTY;
                             
                             // Đặt dock mới
                             dockID = coordToID(x, y, m);
-                            grid[y][x] = DOCK;
+                            grid[x][y] = DOCK;
                             cout << "Dock moved to (" << x << "," << y << ")" << endl;
                         } else {
                             cout << "Invalid coordinates!" << endl;
@@ -166,19 +152,8 @@ class RobotCleaning{
                         cout << "Enter obstacle coordinates (x y): ";
                         cin >> x >> y;
                         if (isValidCoord(x, y)) {
-                            // KIỂM TRA: Không cho đặt vật cản lên robot, dock, hoặc vết bẩn
-                            if (grid[y][x] == ROBOT) {
-                                cout << "ERROR: Cannot place obstacle on robot position!" << endl;
-                            } else if (grid[y][x] == DOCK) {
-                                cout << "ERROR: Cannot place obstacle on dock position!" << endl;
-                            } else if (grid[y][x] == DIRTY) {
-                                cout << "ERROR: Cannot place obstacle on dirty spot!" << endl;
-                            } else if (grid[y][x] == OBSTACLE) {
-                                cout << "ERROR: There is already an obstacle here!" << endl;
-                            } else {
-                                grid[y][x] = OBSTACLE;
-                                cout << "Obstacle added at (" << x << "," << y << ")" << endl;
-                            }
+                            grid[x][y] = OBSTACLE;
+                            cout << "Obstacle added at (" << x << "," << y << ")" << endl;
                         } else {
                             cout << "Invalid coordinates!" << endl;
                         }
@@ -187,15 +162,11 @@ class RobotCleaning{
                     case 4: // Xóa vật cản
                         cout << "Enter obstacle coordinates to remove (x y): ";
                         cin >> x >> y;
-                        if (isValidCoord(x, y)) {
-                            if (grid[y][x] == OBSTACLE) {
-                                grid[y][x] = EMPTY;
-                                cout << "Obstacle removed from (" << x << "," << y << ")" << endl;
-                            } else {
-                                cout << "ERROR: No obstacle at this position!" << endl;
-                            }
+                        if (isValidCoord(x, y) && grid[x][y] == OBSTACLE) {
+                            grid[x][y] = EMPTY;
+                            cout << "Obstacle removed from (" << x << "," << y << ")" << endl;
                         } else {
-                            cout << "Invalid coordinates!" << endl;
+                            cout << "Invalid coordinates or no obstacle!" << endl;
                         }
                         break;
                         
@@ -203,20 +174,9 @@ class RobotCleaning{
                         cout << "Enter dirty spot coordinates (x y): ";
                         cin >> x >> y;
                         if (isValidCoord(x, y)) {
-                            // KIỂM TRA: Không cho đặt vết bẩn lên vật cản, robot, hoặc dock
-                            if (grid[y][x] == OBSTACLE) {
-                                cout << "ERROR: Cannot place dirty spot on obstacle!" << endl;
-                            } else if (grid[y][x] == ROBOT) {
-                                cout << "ERROR: Cannot place dirty spot on robot position!" << endl;
-                            } else if (grid[y][x] == DOCK) {
-                                cout << "ERROR: Cannot place dirty spot on dock position!" << endl;
-                            } else if (grid[y][x] == DIRTY) {
-                                cout << "ERROR: There is already a dirty spot here!" << endl;
-                            } else {
-                                grid[y][x] = DIRTY;
-                                dirtyNode.push_back(coordToID(x, y, m));
-                                cout << "Dirty spot added at (" << x << "," << y << ")" << endl;
-                            }
+                            grid[x][y] = DIRTY;
+                            dirtyNode.push_back(coordToID(x, y, m));
+                            cout << "Dirty spot added at (" << x << "," << y << ")" << endl;
                         } else {
                             cout << "Invalid coordinates!" << endl;
                         }
@@ -225,17 +185,13 @@ class RobotCleaning{
                     case 6: // Xóa vết bẩn
                         cout << "Enter dirty spot coordinates to remove (x y): ";
                         cin >> x >> y;
-                        if (isValidCoord(x, y)) {
-                            if (grid[y][x] == DIRTY) {
-                                grid[y][x] = EMPTY;
-                                id = coordToID(x, y, m);
-                                dirtyNode.erase(remove(dirtyNode.begin(), dirtyNode.end(), id), dirtyNode.end());
-                                cout << "Dirty spot removed from (" << x << "," << y << ")" << endl;
-                            } else {
-                                cout << "ERROR: No dirty spot at this position!" << endl;
-                            }
+                        if (isValidCoord(x, y) && grid[x][y] == DIRTY) {
+                            grid[x][y] = EMPTY;
+                            id = coordToID(x, y, m);
+                            dirtyNode.erase(remove(dirtyNode.begin(), dirtyNode.end(), id), dirtyNode.end());
+                            cout << "Dirty spot removed from (" << x << "," << y << ")" << endl;
                         } else {
-                            cout << "Invalid coordinates!" << endl;
+                            cout << "Invalid coordinates or no dirty spot!" << endl;
                         }
                         break;
                         
@@ -377,25 +333,24 @@ class RobotCleaning{
                 cout << setw(2) << i << " ";
                 for (int j=0;j<m;j++) {
                     char symbol;
-                    int cellValue = visualGrid[i][j];
-                    
-                    // Dùng if-else thay vì switch-case
-                    if (cellValue == ROBOT) symbol = 'R';
-                    else if (cellValue == DOCK) symbol = 'D';
-                    else if (cellValue == OBSTACLE) symbol = 'X';
-                    else if (cellValue == DIRTY) {
-                        // Kiểm tra xem vết bẩn này còn không
-                        int id = coordToID(j, i, m);
-                        if (find(remainingDirt.begin(), remainingDirt.end(), id) != remainingDirt.end()) {
-                            symbol = '*';
-                        } else {
-                            symbol = '.'; // Đã dọn
+                    switch(visualGrid[i][j]) {
+                        case ROBOT: symbol = 'R'; break;
+                        case DOCK: symbol = 'D'; break;
+                        case OBSTACLE: symbol = 'X'; break;
+                        case DIRTY: {
+                            // Kiểm tra xem vết bẩn này còn không
+                            int id = coordToID(j, i, m);
+                            if (find(remainingDirt.begin(), remainingDirt.end(), id) != remainingDirt.end()) {
+                                symbol = '*';
+                            } else {
+                                symbol = '.'; // Đã dọn
+                            }
+                            break;
                         }
+                        case PATH: symbol = 'o'; break;
+                        case EMPTY: symbol = '.'; break;
+                        default: symbol = '?';
                     }
-                    else if (cellValue == PATH) symbol = 'o';
-                    else if (cellValue == EMPTY) symbol = '.';
-                    else symbol = '?';
-                    
                     cout << " " << symbol << " ";
                 }
                 cout << endl;
