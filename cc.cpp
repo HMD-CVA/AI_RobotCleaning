@@ -301,7 +301,7 @@ class RobotCleaning{
             
             // Hiển thị trạng thái ban đầu
             displayAnimatedGrid(displayGrid, current, remainingDirt, 0, totalCost, "Ready to start");
-            delay(500);
+            delay(250);
             
             while (!remainingDirt.empty()) {
                 // Tìm node gần nhất
@@ -319,22 +319,23 @@ class RobotCleaning{
                 }
                 
                 if (nearestNode == -1) {
-                    displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "Cannot reach remaining nodes!");
-                    delay(1000);
-                    break;
+                    // KHÔNG THỂ ĐẾN ĐƯỢC NODE NÀO NỮA - DỪNG LẠI VÀ QUAY VỀ DOCK
+                    displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                    "Cannot reach remaining nodes! Returning to dock...");
+                    delay(250);
+                    break; // Thoát khỏi vòng lặp dọn dẹp
                 }
                 
                 // ANIMATION: Di chuyển đến node bẩn
                 displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
-                                  "Moving to dirty node " + to_string(nearestNode));
-                delay(500);
+                                "Moving to dirty node " + to_string(nearestNode));
+                delay(250);
                 
-                // Di chuyển từng bước với animation - SỬA LỖI 2 CHỮ R
+                // Di chuyển từng bước với animation
                 for (int i=1; i<bestPath.size(); i++) {
-                    // Tạo grid tạm thời cho animation - LUÔN bắt đầu từ displayGrid gốc
                     vector<vector<int>> tempGrid = displayGrid;
                     
-                    // Đánh dấu đường đi đã qua (không bao gồm vị trí hiện tại)
+                    // Đánh dấu đường đi đã qua
                     for (int j=1; j<i; j++) {
                         auto pathCoord = idToCoord(bestPath[j], m);
                         if (tempGrid[pathCoord.second][pathCoord.first] == EMPTY) {
@@ -342,7 +343,6 @@ class RobotCleaning{
                         }
                     }
                     
-                    // QUAN TRỌNG: Đảm bảo chỉ có 1 chữ R duy nhất
                     // Xóa robot khỏi tất cả các vị trí trước đó
                     for (int y=0; y<n; y++) {
                         for (int x=0; x<m; x++) {
@@ -356,10 +356,9 @@ class RobotCleaning{
                     auto newCoord = idToCoord(bestPath[i], m);
                     tempGrid[newCoord.second][newCoord.first] = ROBOT;
                     
-                    // Hiển thị animation
                     displayAnimatedGrid(tempGrid, bestPath[i], remainingDirt, step, totalCost + i,
-                                      "Moving... (" + to_string(i) + "/" + to_string(bestPath.size()-1) + ")");
-                    delay(250);
+                                    "Moving... (" + to_string(i) + "/" + to_string(bestPath.size()-1) + ")");
+                    delay(200);
                 }
                 
                 // Cập nhật grid chính thức sau khi hoàn thành di chuyển
@@ -382,76 +381,111 @@ class RobotCleaning{
                 totalCost += minCost;
                 
                 // Hiển thị kết quả sau khi dọn
-                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "Cleaned node " + to_string(nearestNode) + "! Remaining: " + to_string(remainingDirt.size()));
-                delay(500);
+                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                "Cleaned node " + to_string(nearestNode) + "! Remaining: " + to_string(remainingDirt.size()));
+                delay(200);
                 
                 step++;
                 
                 if (!remainingDirt.empty()) {
-                    displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "Planning next move...");
-                    delay(250);
+                    displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                    "Planning next move...");
+                    delay(200);
                 }
             }
             
-            // Quay về dock với animation - SỬA LỖI 2 CHỮ R
-            if (remainingDirt.empty()) {
-                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "All clean! Returning to dock...");
-                delay(250);
+            // LUÔN QUAY VỀ DOCK - DÙ CÓ DỌN HẾT HAY KHÔNG
+            if (!remainingDirt.empty()) {
+                // Trường hợp không dọn hết được
+                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                "Cleaning incomplete! " + to_string(remainingDirt.size()) + " nodes left. Returning to dock...");
+            } else {
+                // Trường hợp dọn hết
+                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                "All clean! Returning to dock...");
+            }
+            delay(200);
+            
+            // Tìm đường về dock
+            auto dockResult = findPath(current, dockID);
+            if (dockResult.first != INT_MAX) {
+                vector<int> dockPath = dockResult.second;
                 
-                auto dockResult = findPath(current, dockID);
-                if (dockResult.first != INT_MAX) {
-                    vector<int> dockPath = dockResult.second;
+                // Animation di chuyển về dock
+                for (int i=1; i<dockPath.size(); i++) {
+                    vector<vector<int>> tempGrid = displayGrid;
                     
-                    // Animation di chuyển về dock
-                    for (int i=1; i<dockPath.size(); i++) {
-                        vector<vector<int>> tempGrid = displayGrid;
-                        
-                        // Đánh dấu đường đi
-                        for (int j=1; j<i; j++) {
-                            auto pathCoord = idToCoord(dockPath[j], m);
-                            if (tempGrid[pathCoord.second][pathCoord.first] == EMPTY) {
-                                tempGrid[pathCoord.second][pathCoord.first] = PATH;
-                            }
+                    // Đánh dấu đường đi
+                    for (int j=1; j<i; j++) {
+                        auto pathCoord = idToCoord(dockPath[j], m);
+                        if (tempGrid[pathCoord.second][pathCoord.first] == EMPTY) {
+                            tempGrid[pathCoord.second][pathCoord.first] = PATH;
                         }
-                        
-                        // Xóa robot khỏi tất cả các vị trí
-                        for (int y=0; y<n; y++) {
-                            for (int x=0; x<m; x++) {
-                                if (tempGrid[y][x] == ROBOT) {
-                                    tempGrid[y][x] = EMPTY;
-                                }
-                            }
-                        }
-                        
-                        // Đặt robot ở vị trí mới
-                        auto newCoord = idToCoord(dockPath[i], m);
-                        tempGrid[newCoord.second][newCoord.first] = ROBOT;
-                        
-                        displayAnimatedGrid(tempGrid, dockPath[i], remainingDirt, step, totalCost + i,
-                                          "Returning to dock... (" + to_string(i) + "/" + to_string(dockPath.size()-1) + ")");
-                        delay(250);
                     }
                     
-                    totalCost += dockResult.first;
-                    
-                    // Cập nhật grid cuối cùng - Đảm bảo chỉ có 1 chữ R
+                    // Xóa robot khỏi tất cả các vị trí
                     for (int y=0; y<n; y++) {
                         for (int x=0; x<m; x++) {
-                            if (displayGrid[y][x] == ROBOT) {
-                                displayGrid[y][x] = PATH;
+                            if (tempGrid[y][x] == ROBOT) {
+                                tempGrid[y][x] = EMPTY;
                             }
                         }
                     }
                     
-                    // Đặt robot ở dock
-                    displayGrid[idToCoord(dockID, m).second][idToCoord(dockID, m).first] = ROBOT;
+                    // Đặt robot ở vị trí mới
+                    auto newCoord = idToCoord(dockPath[i], m);
+                    tempGrid[newCoord.second][newCoord.first] = ROBOT;
                     
-                    displayAnimatedGrid(displayGrid, dockID, remainingDirt, step, totalCost, 
-                                      "Mission Complete! Robot at dock.");
-                } else {
-                    displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
-                                      "Cannot return to dock!");
+                    string status = "Returning to dock... (" + to_string(i) + "/" + to_string(dockPath.size()-1) + ")";
+                    if (!remainingDirt.empty()) {
+                        status += " | " + to_string(remainingDirt.size()) + " nodes uncleaned";
+                    }
+                    
+                    displayAnimatedGrid(tempGrid, dockPath[i], remainingDirt, step, totalCost + i, status);
+                    delay(200);
                 }
+                
+                totalCost += dockResult.first;
+                
+                // Cập nhật grid cuối cùng
+                for (int y=0; y<n; y++) {
+                    for (int x=0; x<m; x++) {
+                        if (displayGrid[y][x] == ROBOT) {
+                            displayGrid[y][x] = PATH;
+                        }
+                    }
+                }
+                
+                // Đặt robot ở dock
+                displayGrid[idToCoord(dockID, m).second][idToCoord(dockID, m).first] = ROBOT;
+                
+                // Hiển thị kết quả cuối cùng
+                if (!remainingDirt.empty()) {
+                    displayAnimatedGrid(displayGrid, dockID, remainingDirt, step, totalCost, 
+                                    "Mission incomplete! " + to_string(remainingDirt.size()) + " nodes could not be cleaned.");
+                } else {
+                    displayAnimatedGrid(displayGrid, dockID, remainingDirt, step, totalCost, 
+                                    "Mission Complete! All nodes cleaned successfully.");
+                }
+            } else {
+                // Không thể về dock
+                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
+                                "ERROR: Cannot return to dock from current position!");
+            }
+            
+            // Thống kê cuối cùng
+            cout << "\n=== CLEANING SUMMARY ===" << endl;
+            cout << "Total steps: " << step << endl;
+            cout << "Total cost: " << totalCost << endl;
+            cout << "Nodes cleaned: " << (dirtyNode.size() - remainingDirt.size()) << "/" << dirtyNode.size() << endl;
+            if (!remainingDirt.empty()) {
+                cout << "Failed to clean: " << remainingDirt.size() << " nodes" << endl;
+                cout << "Uncleaned nodes: ";
+                for (int node : remainingDirt) {
+                    auto coord = idToCoord(node, m);
+                    cout << node << "(" << coord.first << "," << coord.second << ") ";
+                }
+                cout << endl;
             }
             
             cout << "\nPress Enter to return to main menu..." << endl;
@@ -459,12 +493,10 @@ class RobotCleaning{
             cin.get();
         }
         
-    // private:
         bool isValidCoord(int x, int y) {
             return x >= 0 && x < m && y >= 0 && y < n;
         }
         
-    // public:
         int getStartID() { return startID; } 
         void setStartID(int _id) { startID = _id; }
         void setDockID(int _id) { dockID = _id; }
