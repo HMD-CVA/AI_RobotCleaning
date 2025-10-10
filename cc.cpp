@@ -1,4 +1,16 @@
-#include<bits/stdc++.h>
+#include <iostream>      
+#include <fstream>       
+#include <vector>    
+#include <queue>                 
+#include <algorithm>            
+#include <chrono>                
+#include <thread>                
+#include <cmath>          
+#include <cstdlib>     
+#include <iomanip>         
+#include <utility>  
+#include <climits>  
+#include <cstdint>          
 #include <limits>
 #include <unistd.h> // for usleep (Linux/Mac)
 // #include <windows.h> // for Sleep (Windows)
