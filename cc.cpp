@@ -382,23 +382,20 @@ class RobotCleaning{
                 totalCost += minCost;
                 
                 // Hiển thị kết quả sau khi dọn
-                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
-                                  "Cleaned node " + to_string(nearestNode) + "! Remaining: " + to_string(remainingDirt.size()));
+                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "Cleaned node " + to_string(nearestNode) + "! Remaining: " + to_string(remainingDirt.size()));
                 delay(1500);
                 
                 step++;
                 
                 if (!remainingDirt.empty()) {
-                    displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
-                                      "Planning next move...");
+                    displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "Planning next move...");
                     delay(1000);
                 }
             }
             
             // Quay về dock với animation - SỬA LỖI 2 CHỮ R
             if (remainingDirt.empty()) {
-                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
-                                  "All clean! Returning to dock...");
+                displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, "All clean! Returning to dock...");
                 delay(2000);
                 
                 auto dockResult = findPath(current, dockID);
@@ -417,7 +414,6 @@ class RobotCleaning{
                             }
                         }
                         
-                        // QUAN TRỌNG: Đảm bảo chỉ có 1 chữ R duy nhất
                         // Xóa robot khỏi tất cả các vị trí
                         for (int y=0; y<n; y++) {
                             for (int x=0; x<m; x++) {
@@ -463,12 +459,12 @@ class RobotCleaning{
             cin.get();
         }
         
-    private:
+    // private:
         bool isValidCoord(int x, int y) {
             return x >= 0 && x < m && y >= 0 && y < n;
         }
         
-    public:
+    // public:
         int getStartID() { return startID; } 
         void setStartID(int _id) { startID = _id; }
         void setDockID(int _id) { dockID = _id; }
