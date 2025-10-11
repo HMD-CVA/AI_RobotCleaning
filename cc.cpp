@@ -7,7 +7,8 @@
 #include <thread>                
 #include <cmath>          
 #include <cstdlib>     
-#include <iomanip>         
+#include <iomanip>     
+#include <string>    
 #include <utility>  
 #include <climits>  
 #include <cstdint>          
