@@ -382,7 +382,7 @@ public:
             vector<int> bestPath;
             
             for (int dirtyId : tempRemaining) {
-                auto result = findPath(tempCurrent, dirtyId);//, true);
+                auto result = findPath(tempCurrent, dirtyId, true);
                 if (result.first != INT_MAX && result.first < minCost) {
                     minCost = result.first;
                     nearestNode = dirtyId;
