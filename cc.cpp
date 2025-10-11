@@ -382,7 +382,7 @@ public:
             vector<int> bestPath;
             
             for (int dirtyId : tempRemaining) {
-                auto result = findPath(tempCurrent, dirtyId);
+                auto result = findPath(tempCurrent, dirtyId);//, true);
                 if (result.first != INT_MAX && result.first < minCost) {
                     minCost = result.first;
                     nearestNode = dirtyId;
@@ -440,7 +440,7 @@ public:
             totalCost += pathCost;
             
             displayAnimatedGrid(displayGrid, current, remainingDirt, step, totalCost, 
-                            "✓ Cleaned! Remaining: " + to_string(remainingDirt.size()));
+                            "Cleaned! Remaining: " + to_string(remainingDirt.size()));
             delay(500);
             step++;
         }
@@ -709,7 +709,7 @@ public:
         cout << "=====================================" << endl;
         
         // Manhattan results
-        cout << "\n🔷 MANHATTAN HEURISTIC:" << endl;
+        cout << "\n$ MANHATTAN HEURISTIC:" << endl;
         cout << "• Execution time: " << timeManhattan << " microseconds" << endl;
         if (resultManhattan.first == INT_MAX) {
             cout << "• Result: NO PATH FOUND" << endl;
@@ -721,13 +721,14 @@ public:
                 auto coord = idToCoord(resultManhattan.second[i]);
                 cout << "(" << coord.first << "," << coord.second << ")";
                 if (i < resultManhattan.second.size() - 1) cout << " → ";
-                if ((i+1) % 4 == 0 && i < resultManhattan.second.size() - 1) cout << endl << "     ";
+                // if ((i+1) % 4 == 0 && i < resultManhattan.second.size() - 1) 
+                // cout << endl << "     ";
             }
             cout << endl;
         }
         
         // Euclidean results
-        cout << "\n🔷 EUCLIDEAN HEURISTIC:" << endl;
+        cout << "\n$ EUCLIDEAN HEURISTIC:" << endl;
         cout << "• Execution time: " << timeEuclidean << " microseconds" << endl;
         if (resultEuclidean.first == INT_MAX) {
             cout << "• Result: NO PATH FOUND" << endl;
@@ -745,12 +746,12 @@ public:
         }
         
         // So sánh chi tiết
-        cout << "\n📊 COMPARISON SUMMARY:" << endl;
+        cout << "\n$ COMPARISON SUMMARY:" << endl;
         cout << "----------------------------------------" << endl;
         
         if (resultManhattan.first != INT_MAX && resultEuclidean.first != INT_MAX) {
             // Cả hai tìm thấy đường đi
-            cout << "✅ Both heuristics found a path" << endl;
+            cout << "$ Both heuristics found a path" << endl;
             cout << "• Manhattan execution time: " << timeManhattan << " μs" << endl;
             cout << "• Euclidean execution time: " << timeEuclidean << " μs" << endl;
             cout << "• Time difference: " << abs(timeManhattan - timeEuclidean) << " μs" << endl;
@@ -759,7 +760,7 @@ public:
             cout << "• Cost difference: " << abs(resultManhattan.first - resultEuclidean.first) << " steps" << endl;
             
             // So sánh hiệu suất
-            cout << "\n🏆 PERFORMANCE ANALYSIS:" << endl;
+            cout << "\n$ PERFORMANCE ANALYSIS:" << endl;
             if (timeManhattan < timeEuclidean) {
                 double speedup = (double)(timeEuclidean - timeManhattan) / timeEuclidean * 100;
                 cout << "• Manhattan is " << fixed << setprecision(1) << speedup << "% faster" << endl;
@@ -779,7 +780,7 @@ public:
             }
             
             // Đánh giá tổng quan
-            cout << "\n💡 RECOMMENDATION:" << endl;
+            cout << "\n$ RECOMMENDATION:" << endl;
             if (timeManhattan < timeEuclidean && resultManhattan.first <= resultEuclidean.first) {
                 cout << "• Manhattan heuristic is BETTER for this case" << endl;
             } else if (timeEuclidean < timeManhattan && resultEuclidean.first <= resultManhattan.first) {
@@ -793,21 +794,21 @@ public:
             }
             
         } else if (resultManhattan.first != INT_MAX) {
-            cout << "❌ Only Manhattan found a path" << endl;
+            cout << "$ Only Manhattan found a path" << endl;
             cout << "• Euclidean failed to find a path" << endl;
             cout << "• Manhattan execution time: " << timeManhattan << " μs" << endl;
             cout << "• Manhattan path cost: " << resultManhattan.first << " steps" << endl;
-            cout << "💡 Manhattan heuristic is SUPERIOR for this case" << endl;
+            cout << "=> Manhattan heuristic is SUPERIOR for this case" << endl;
             
         } else if (resultEuclidean.first != INT_MAX) {
-            cout << "❌ Only Euclidean found a path" << endl;
+            cout << "$ Only Euclidean found a path" << endl;
             cout << "• Manhattan failed to find a path" << endl;
             cout << "• Euclidean execution time: " << timeEuclidean << " μs" << endl;
             cout << "• Euclidean path cost: " << resultEuclidean.first << " steps" << endl;
-            cout << "💡 Euclidean heuristic is SUPERIOR for this case" << endl;
+            cout << "=> Euclidean heuristic is SUPERIOR for this case" << endl;
             
         } else {
-            cout << "❌ Neither heuristic found a path" << endl;
+            cout << "$ Neither heuristic found a path" << endl;
             cout << "• Both algorithms failed to find a valid path" << endl;
             cout << "• The destination might be unreachable from the start position" << endl;
         }
